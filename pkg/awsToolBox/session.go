@@ -18,14 +18,18 @@ type awsSession struct {
 // AwsSession is the global AWS session for interacting with AWS.
 var AWSSession awsSession
 
-func (a *awsSession) getSession(awsAccessKey string, awsSecretKey string, awsRegion string) (*session.Session, error) {
+func (a *awsSession) InitialLogin(awsAccessKey, awsSecretAccessKey, awsRegion string) error {
+	_, err := a.getSession(awsAccessKey, awsSecretAccessKey, awsRegion)
+	return err
+}
+
+func (a *awsSession) getSession(awsAccessKey, awsSecretAccessKey, awsRegion string) (*session.Session, error) {
 	var err error
 
 	a.once.Do(func() {
-		// We're using static credentials here so that we can use AWS credentials for cluster providers.
-		// When we have more time, we should make this not metrics focused, as the intent of this library is to be purpose agnostic.
+		// Create the AWS session
 		a.session, err = session.NewSession(aws.NewConfig().
-			WithCredentials(credentials.NewStaticCredentials(awsAccessKey, awsSecretKey, "")).
+			WithCredentials(credentials.NewStaticCredentials(awsAccessKey, awsSecretAccessKey, "")).
 			WithRegion(awsRegion))
 
 		if err != nil {
