@@ -19,14 +19,8 @@ type awsSession struct {
 // AwsSession is the global AWS session for interacting with AWS.
 var AWSSession awsSession
 
-func (a *awsSession) InitialLogin(awsAccessKey, awsSecretAccessKey, awsRegion string, viperEnv bool) error {
-	if viperEnv {
-		// Grab AWS credentials from environment variables
-		awsAccessKey = viper.GetString("aws.awsAccessKey")
-		awsSecretAccessKey = viper.GetString("aws.awsSecretKey")
-		awsRegion = viper.GetString("aws.region")
-	}
-	_, err := a.getSession(awsAccessKey, awsSecretAccessKey, awsRegion)
+func (a *awsSession) InitialLogin() error {
+	_, err := a.getSession(viper.GetString("aws.awsAccessKey"), viper.GetString("aws.awsSecretKey"), viper.GetString("aws.region"))
 	return err
 }
 
@@ -47,6 +41,9 @@ func (a *awsSession) getSession(awsAccessKey, awsSecretAccessKey, awsRegion stri
 	if a.session == nil {
 		err = fmt.Errorf("unable to initialize AWS session")
 	}
+
+	//print a.session
+	fmt.Println(a.session.Config.Credentials)
 
 	return a.session, err
 }
