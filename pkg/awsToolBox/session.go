@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/spf13/viper"
 )
 
 type awsSession struct {
@@ -18,7 +19,13 @@ type awsSession struct {
 // AwsSession is the global AWS session for interacting with AWS.
 var AWSSession awsSession
 
-func (a *awsSession) InitialLogin(awsAccessKey, awsSecretAccessKey, awsRegion string) error {
+func (a *awsSession) InitialLogin(awsAccessKey, awsSecretAccessKey, awsRegion string, viperEnv bool) error {
+	if viperEnv {
+		// Grab AWS credentials from environment variables
+		awsAccessKey = viper.GetString("aws.awsAccessKey")
+		awsSecretAccessKey = viper.GetString("aws.awsSecretKey")
+		awsRegion = viper.GetString("aws.region")
+	}
 	_, err := a.getSession(awsAccessKey, awsSecretAccessKey, awsRegion)
 	return err
 }

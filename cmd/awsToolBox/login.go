@@ -24,7 +24,7 @@ var loginCmd = &cobra.Command{
 	Long:  `login to AWS. This command will use the AWS CLI to login to AWS.`,
 	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		res := awsToolBox.AWSSession.InitialLogin(args[0], args[1], args[2])
+		res := awsToolBox.AWSSession.InitialLogin(awsAccessKey, awsSecretKey, awsRegion, viperEnv)
 		fmt.Println(res)
 	},
 }
