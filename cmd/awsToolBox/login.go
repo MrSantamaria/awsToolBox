@@ -11,20 +11,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	awsAccessKey string
-	awsSecretKey string
-	awsRegion    string
-	viperEnv     bool
-)
-
 var loginCmd = &cobra.Command{
 	Use:   "login",
-	Short: "login to AWS",
-	Long:  `login to AWS. This command will use the AWS CLI to login to AWS.`,
+	Short: "Verify AWS credentials",
+	Long:  `Login to AWS. This command will use the AWS CLI to login to AWS.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		res := awsToolBox.AWSSession.InitialLogin()
-		fmt.Println(res)
+		if res != nil {
+			fmt.Println(res)
+		} else {
+			fmt.Println("Login successful")
+		}
 	},
 }
 

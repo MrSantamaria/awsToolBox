@@ -17,8 +17,10 @@ var vpcCmd = &cobra.Command{
 	Long:  `Functions for managing VPCs. This command will use the AWS CLI to login to AWS.`,
 	Args:  cobra.MinimumNArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		res := awsToolBox.AWSSession.ListVPCs()
-		fmt.Println(res)
+		_, res := awsToolBox.AWSSession.ListVPCs()
+		if res != nil {
+			fmt.Println(res)
+		}
 	},
 }
 
