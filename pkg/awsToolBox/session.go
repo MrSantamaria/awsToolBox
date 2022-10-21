@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/spf13/viper"
 )
 
@@ -18,6 +19,7 @@ type awsSession struct {
 	iam     *iam.IAM
 	ec2     *ec2.EC2
 	once    sync.Once
+	sts     *sts.STS
 }
 
 // AwsSession is the global AWS session for interacting with AWS.
@@ -46,6 +48,7 @@ func (AWSSession *awsSession) getSession(awsAccessKey, awsSecretAccessKey, awsRe
 
 		AWSSession.iam = iam.New(AWSSession.session)
 		AWSSession.ec2 = ec2.New(AWSSession.session)
+		AWSSession.sts = sts.New(AWSSession.session)
 
 		if err != nil {
 			log.Printf("error initializing AWS session: %v", err)

@@ -2,96 +2,109 @@ package awsToolBox
 
 import (
 	"fmt"
+	"log"
+	"strings"
+	"sync"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/fatih/color"
+	"github.com/spf13/viper"
 )
 
-func (AwsSession *awsSession) ListVPCs() ([]*ec2.Vpc, error) {
+var (
+	wg sync.WaitGroup
+)
+
+func (AwsSession *awsSession) Vpcs() error {
 	if AwsSession.session == nil {
 		err := AwsSession.InitialLogin()
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 
 	input := &ec2.DescribeVpcsInput{}
 	result, err := AwsSession.ec2.DescribeVpcs(input)
 	if err != nil {
-		return nil, err
-	} else {
-		fmt.Println("VPCs found: ", len(result.Vpcs))
+		return err
 	}
+	fmt.Println("VPCs found: ", len(result.Vpcs))
 
 	//Print the names of the VPCs
+vpcs:
 	for _, vpc := range result.Vpcs {
 		var vpcName string
+		//If there exists a tag with the key "Name", then print the value
+
 		for _, tag := range vpc.Tags {
 			if *tag.Key == "Name" {
 				vpcName = *tag.Value
 
-				color.Set(color.FgGreen)
-				fmt.Printf("VPC ID: %s, Name: %s\n", *vpc.VpcId, vpcName)
-				color.Unset()
-				continue
+				if viper.GetBool("vpc.list") {
+					color.Set(color.FgGreen)
+					log.Printf("VPC ID: %s, Name: %s\n", *vpc.VpcId, vpcName)
+					color.Unset()
+				}
+				continue vpcs
 			}
 		}
 		color.Set(color.FgYellow)
-		fmt.Printf("VPC ID: %s, Name: %s\n", *vpc.VpcId, "No name found")
+		log.Printf("VPC ID: %s, Name: %s\n", *vpc.VpcId, "No name found")
 		color.Unset()
 
-		// //Attempt to delete the VPC
-		// err := AwsSession.deleteVPC(*vpc.VpcId)
-		// if err != nil {
-		// 	color.Set(color.FgRed)
-		// 	fmt.Println(err)
-		// 	color.Unset()
-		// }
-	}
+		if viper.GetBool("vpc.delete") {
+			wg.Add(1)
 
-	return result.Vpcs, nil
-}
+			go func(vpcId string) {
+				defer wg.Done()
+				err := AwsSession.deleteVPC(vpcId)
+				if err != nil {
+					color.Set(color.FgRed)
+					log.Println(err)
+					color.Unset()
+				}
+			}(*vpc.VpcId)
 
-func (AwsSession *awsSession) deleteVPC(vpcID string) error {
-	if AwsSession.session == nil {
-		err := AwsSession.InitialLogin()
-		if err != nil {
-			return err
+			break vpcs
+
 		}
 	}
+	wg.Wait()
+	return nil
+}
 
+func (AwsSession *awsSession) deleteVPC(vpcId string) error {
 	input := &ec2.DeleteVpcInput{
-		VpcId: &vpcID,
+		VpcId: aws.String(vpcId),
 	}
+
 	_, err := AwsSession.ec2.DeleteVpc(input)
 	//if err contains dependencyViolation, then delete the subnets
-	// if strings.Contains(err.Error(), "DependencyViolation") {
-	// 	//Delete the subnets
-	// 	err := AwsSession.deleteDependencySubnet(vpcID)
-	// 	if err != nil {
-	// 		fmt.Println(err)
-	// 	}
-	// 	//Try deleting the VPC again
-	// 	err = AwsSession.deleteVPC(vpcID)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// }
+	if viper.GetBool("vpc.force") && strings.Contains(err.Error(), "DependencyViolation") {
+		//Delete the subnets
+		err := AwsSession.deleteDependencySubnet(vpcId)
+		if err != nil {
+			fmt.Println(err)
+		}
+		//Try deleting the VPC again
+		// err = AwsSession.deleteVPC(vpcId)
+		// if err != nil {
+		// 	return err
+		// }
+
+	}
 	if err != nil {
 		return err
 	}
+	color.Set(color.FgGreen)
+	log.Printf("VPC %s deleted\n", vpcId)
+	color.Unset()
 
 	return nil
 }
 
 func (AwsSession *awsSession) deleteDependencySubnet(vpcID string) error {
-	if AwsSession.session == nil {
-		err := AwsSession.InitialLogin()
-		if err != nil {
-			return err
-		}
-	}
 
 	//Get the subnets based on the VPC ID
 	input := &ec2.DescribeSubnetsInput{
@@ -108,19 +121,29 @@ func (AwsSession *awsSession) deleteDependencySubnet(vpcID string) error {
 		return err
 	}
 
-	//Print the names of the subnets
+	//Delete the subnets
 	for _, subnet := range result.Subnets {
-		var subnetName string
-		for _, tag := range subnet.Tags {
-			if *tag.Key == "Name" {
-				subnetName = *tag.Value
-
-				fmt.Printf("Subnet ID: %s, Name: %s\n", *subnet.SubnetId, subnetName)
-			}
+		err := AwsSession.deleteVPCSubnet(vpcID, *subnet.SubnetId)
+		if err != nil {
+			return err
 		}
-
 	}
 
 	return nil
+}
 
+func (AwsSession *awsSession) deleteVPCSubnet(vpcID string, subnetId string) error {
+	input := &ec2.DeleteSubnetInput{
+		SubnetId: aws.String(subnetId),
+	}
+
+	_, err := AwsSession.ec2.DeleteSubnet(input)
+	if err != nil {
+		return err
+	}
+	color.Set(color.FgGreen)
+	log.Printf("Subnet dependency %s for VPC %s was deleted. \n", subnetId, vpcID)
+	color.Unset()
+
+	return nil
 }
