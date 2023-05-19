@@ -46,7 +46,7 @@ vpcs:
 					log.Printf("VPC ID: %s, Name: %s\n", *vpc.VpcId, vpcName)
 					color.Unset()
 				}
-				continue vpcs
+				//continue vpcs
 			}
 		}
 		color.Set(color.FgYellow)
@@ -88,10 +88,10 @@ func (AwsSession *awsSession) deleteVPC(vpcId string) error {
 			fmt.Println(err)
 		}
 		//Try deleting the VPC again
-		// err = AwsSession.deleteVPC(vpcId)
-		// if err != nil {
-		// 	return err
-		// }
+		err = AwsSession.deleteVPC(vpcId)
+		if err != nil {
+			return err
+		}
 
 	}
 	if err != nil {

@@ -17,7 +17,7 @@ func (AwsSession *awsSession) Iam() error {
 		}
 	}
 
-	//AwsSession.ListOpenIDConnectProviders()
+	AwsSession.ListOpenIDConnectProviders()
 	//AWSSession.ListRoles()
 	//AwsSession.ListPolicies()
 
@@ -46,7 +46,7 @@ func (AwsSession *awsSession) ListOpenIDConnectProviders() error {
 
 		//Add flags to use a name for the provider and days to expire
 		//If the name contains "cloudfront" and is older than 7 days but not older than 2 days, delete it
-		if strings.Contains(*result.Url, "cloudfront") && time.Since(*result.CreateDate) > 36*time.Hour {
+		if strings.Contains(*result.Url, "cloudfront") && time.Since(*result.CreateDate) > 24*time.Hour {
 			//Create DeleteOpenIDConnectProviderInput struct
 			input := &iam.DeleteOpenIDConnectProviderInput{
 				OpenIDConnectProviderArn: provider.Arn,
@@ -75,7 +75,7 @@ func (AwsSession *awsSession) ListRoles() error {
 	}
 
 	for _, role := range result.Roles {
-		if strings.Contains(*role.Arn, "osde2e") && time.Since(*role.CreateDate) > 20*24*time.Hour {
+		if strings.Contains(*role.Arn, "osde2e") && time.Since(*role.CreateDate) > 36*time.Hour {
 			fmt.Printf("Attempting to delete role: %s\n", *role.RoleName)
 			//Remove Roles from Instance Profiles
 			//Create ListInstanceProfilesForRoleInput struct
@@ -192,7 +192,7 @@ func (AwsSession *awsSession) ListPolicies() error {
 	}
 
 	for _, policy := range result.Policies {
-		if strings.Contains(*policy.Arn, "osde2e") && time.Since(*policy.CreateDate) > 90*24*time.Hour {
+		if strings.Contains(*policy.Arn, "osde2e") && time.Since(*policy.CreateDate) > 36*time.Hour {
 			fmt.Printf("Attempting to delete policy: %s", *policy.Arn)
 			input := &iam.DeletePolicyInput{
 				PolicyArn: policy.Arn,
